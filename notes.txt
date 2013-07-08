@@ -1,0 +1,6 @@
+http://citibikenyc.com/stations/json/
+http://appservices.citibikenyc.com/data2/stations.php
+http://appservices.citibikenyc.com/data2/stations.php?updateOnly=true
+
+http://citibikenyc.com/blog
+https://sites.google.com/site/citibikestats/
