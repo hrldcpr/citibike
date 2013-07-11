@@ -41,8 +41,11 @@ for path in paths:
 
         latest = t
 
-print(json.dumps({'start': start,
-                  'delta': DELTA,
-                  'stations': stations,
-                  'data': matrix},
-                 separators=(',', ':')))
+sys.stdout.write('var DATA = ')
+json.dump({'start': start,
+           'delta': DELTA,
+           'stations': stations,
+           'data': matrix},
+          sys.stdout,
+          separators=(',', ':'))
+sys.stdout.write(';\n')
