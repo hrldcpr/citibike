@@ -40,6 +40,7 @@ for path in paths:
         matrix.append(row)
 
         latest = t
+        if start is None: start = t
 
 sys.stdout.write('var DATA = ')
 json.dump({'start': start,
