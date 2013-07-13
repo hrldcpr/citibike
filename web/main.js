@@ -68,7 +68,7 @@ function updateArrival(update) {
     var transition = update.transition()
         .delay(function() { return 10000 * Math.random(); })
         .duration(1000);
-    transition.selectAll(".pulse")
+    transition.select(".pulse")
         .each("start", function() {
             d3.select(this)
                 .attr("r", radius(500))
@@ -78,11 +78,11 @@ function updateArrival(update) {
         .attr("opacity", 1);
 
     transition = transition.transition().duration(250);
-    transition.selectAll(".bikes")
+    transition.select(".bikes")
         .attr("r", function(d) { return radius(1.5 * (d.availableBikes + d.availableDocks)); })
         .transition()
         .attr("r", function(d) { return radius(d.availableBikes); });
-    transition.selectAll(".docks")
+    transition.select(".docks")
         .attr("r", function(d) { return radius(d.availableBikes + d.availableDocks); });
 }
 
@@ -90,7 +90,7 @@ function updateDeparture(update) {
     var transition = update.transition()
         .delay(function() { return 10000 * Math.random(); })
         .duration(1000);
-    transition.selectAll(".pulse")
+    transition.select(".pulse")
         .each("start", function(d) {
             d3.select(this)
                 .attr("r", radius(d.availableBikes))
@@ -100,11 +100,11 @@ function updateDeparture(update) {
         .attr("opacity", 0);
 
     transition = transition.transition().duration(250);
-    transition.selectAll(".docks")
+    transition.select(".docks")
         .attr("r", function(d) { return radius(1.5 * (d.availableBikes + d.availableDocks)); })
         .transition()
         .attr("r", function(d) { return radius(d.availableBikes + d.availableDocks); });
-    transition.selectAll(".bikes")
+    transition.select(".bikes")
         .attr("r", function(d) { return radius(d.availableBikes); });
 }
 
@@ -156,6 +156,40 @@ var mercator = d3.geo.mercator().scale(1 / 2 / Math.PI).translate([0,0]);
     }, 'jsonp');
 
     return true; // lest d3.timer repeat ad nauseum
+});//();
+
+STATIONS = $.map(DATA.stations, function(id) {
+    return STATIONS[id];
+});
+
+function setTime(i) {
+    overlay.selectAll(".station").data(DATA.data[i])
+        .call(function(station) {
+            station.enter()
+                .append("g").attr("class", "station")
+                .attr("transform", function(d, i) { return "translate(" + mercator([STATIONS[i].longitude, STATIONS[i].latitude]) + ")"; })
+                .call(function(enter) {
+                    enter.append("title")
+                        .text(function(d, i) { return i; })
+                    enter.append("circle").attr("class", "docks");
+                    enter.append("circle").attr("class", "bikes");
+                    enter.append("circle").attr("class", "pulse");
+                });
+
+            station.select(".bikes")
+                .attr("r", function(d) { return radius(d[0]); });
+            station.select(".docks")
+                .attr("r", function(d) { return radius(d[0] + d[1]); });
+        });
+}
+
+var TIME = 0;
+(function lapse() {
+    console.log(new Date(1000 * (DATA.start + TIME * DATA.delta)));
+    if (TIME < DATA.data.length) {
+        setTime(TIME++);
+        setTimeout(lapse, 100);
+    }
 })();
 
 zoomed();
