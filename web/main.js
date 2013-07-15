@@ -101,7 +101,7 @@ var svg = map.append("svg")
     .attr("width", chartWidth + margin.left + margin.right)
     .attr("height", chartHeight + margin.top + margin.bottom)
     .on("mousemove", chartHover)
-  .append("g")
+    .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 $('.chart').mouseleave(chartLeave);
 var chart = svg.append("g"); // so that paths don't go on top of everything else
@@ -202,6 +202,8 @@ function setTime(time) {
 }
 
 x.domain([getDate(0), getDate(DATA.data.length)]);
+svgX.call(xAxis);
+
 var STATION = -1;
 function setStation(i) {
     if (STATION == i) return;
@@ -221,7 +223,9 @@ function setStation(i) {
         {className: "bikes", values: $.map(DATA.data, function(d, i) { return {x: getDate(i), y: getBikes(d)} })},
         {className: "docks", values: $.map(DATA.data, function(d, i) { return {x: getDate(i), y: getDocks(d)} })}
     ]);
+
     y.domain([0, d3.max(data[1].values, function(d) { return d.y0 + d.y; })]);
+    svgY.transition().call(yAxis);
 
     chart.selectAll("path").data(data)
         .call(function(path) {
@@ -231,9 +235,6 @@ function setStation(i) {
 
             path.transition().attr("d", function(d) { return area(d.values) });
         });
-
-    svgX.call(xAxis);
-    svgY.call(yAxis);
 }
 
 var hourFormat = d3.time.format("%_I%p");
