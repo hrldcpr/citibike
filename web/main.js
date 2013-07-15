@@ -103,7 +103,7 @@ var svg = map.append("svg")
     .on("mousemove", chartHover)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-$('.chart').mouseenter(chartEnter).mouseleave(chartLeave);
+$('.chart').mouseleave(chartLeave);
 var chart = svg.append("g"); // so that paths don't go on top of everything else
 
 var svgX = svg.append("g")
@@ -224,9 +224,6 @@ function setStation(i) {
 }
 
 var CHART_HOVER = false;
-function chartEnter() {
-    CHART_HOVER = true;
-}
 function chartHover() {
     CHART_HOVER = true;
     setTime(x.invert(d3.mouse(this)[0] - margin.left));
