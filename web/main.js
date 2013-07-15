@@ -235,19 +235,11 @@ function chartLeave() {
     CHART_HOVER = false;
 }
 
-var setStationTimer;
-function delayedSetStation(i) {
-    // if (setStationTimer) clearTimeout(setStationTimer);
-    // setStationTimer = setTimeout(function() {
-    //     setStationTimer = undefined;
-        setStation(i);
-    // }, 100);
-}
 function stationOver(d, i) {
-    delayedSetStation(i);
+    setStation(i);
 }
 function stationLeave() {
-    delayedSetStation();
+    setStation();
 }
 
 function lapse() {
