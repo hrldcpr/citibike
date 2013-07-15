@@ -56,9 +56,9 @@ var zoom = d3.behavior.zoom()
 var mercator = d3.geo.mercator().scale(1 / 2 / Math.PI).translate([0,0]);
 
 
-var margin = {top: 20, right: 20, bottom: 30, left: 50},
-    chartWidth = width - margin.left - margin.right,
-    chartHeight = 200 - margin.top - margin.bottom;
+var margin = {top: 50, right: 20, bottom: 30, left: 50},
+    chartWidth = width - 20 - margin.left - margin.right,
+    chartHeight = 250 - margin.top - margin.bottom;
 
 var x = d3.time.scale()
     .range([0, chartWidth]);
@@ -118,6 +118,17 @@ var scrubber = svg.append("g")
 scrubber.append("line")
     .attr("y2", chartHeight);
 
+var info = svg.append("g")
+    .attr("class", "info");
+var label = info.append("text")
+    .attr("class", "name");
+var hour = info.append("text")
+    .attr("class", "hour")
+    .attr("x", chartWidth/2 - 10);
+var day = info.append("text")
+    .attr("class", "day")
+    .attr("x", chartWidth/2 + 10);
+
 function zoomed() {
     var tiles = tile
         .scale(zoom.scale())
@@ -166,6 +177,7 @@ function setTime(time) {
     var i = getIndex(time);
     if (INDEX == i) return;
     INDEX = i;
+    updateInfo();
 
     overlay.selectAll(".station").data(DATA.data[i])
         .call(function(station) {
@@ -194,6 +206,7 @@ var STATION = -1;
 function setStation(i) {
     if (STATION == i) return;
     STATION = i;
+    updateInfo();
 
     var getBikes, getDocks;
     if (i in STATIONS) {
@@ -221,6 +234,15 @@ function setStation(i) {
 
     svgX.call(xAxis);
     svgY.call(yAxis);
+}
+
+var hourFormat = d3.time.format("%_I%p");
+var dayFormat = d3.time.format("%A");
+function updateInfo() {
+    label.text(STATION in STATIONS ? STATIONS[STATION].label : "All Stations");
+    var date = getDate(INDEX);
+    hour.text(hourFormat(date).toLowerCase());
+    day.text(dayFormat(date));
 }
 
 var CHART_HOVER = false;

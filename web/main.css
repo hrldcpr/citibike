@@ -20,6 +20,22 @@ body {
   bottom: 10px;
   left: 10px;
   background: rgba(255, 255, 255, 0.8);
+}
+
+.info {
+  font: 48px serif;
+  fill: #332;
+}
+
+.hour {
+  text-anchor: end;
+}
+
+.day {
+  text-anchor: start;
+}
+
+.axis {
   font: 10px sans-serif;
 }
 
