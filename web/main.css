@@ -15,19 +15,34 @@ body {
   position: absolute;
 }
 
-.overlay .bikes {
+.chart {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.bikes {
   fill: #037;
 }
 
-.overlay .docks {
+.docks {
   fill: #3cf;
 }
 
-.overlay .pulse {
-  vector-effect: non-scaling-stroke;
-  stroke-width: 2px;
-  stroke: #037;
-  fill: none;
+.scrubber {
+  stroke: black;
+  stroke-width: 4px;
+  stroke-linecap: round;
+  opacity: 0.5;
 }
 
 .tile {

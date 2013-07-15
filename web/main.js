@@ -1,7 +1,40 @@
 
+function matrix3d(scale, translate) {
+    var k = scale / 256, r = scale % 1 ? Number : Math.round;
+    return "matrix3d(" + [k, 0, 0, 0, 0, k, 0, 0, 0, 0, k, 0, r(translate[0] * scale), r(translate[1] * scale), 0, 1 ] + ")";
+}
+
+function svgTransform(scale, translate) {
+    return "translate(" + translate + ") scale(" + scale + ")";
+}
+
+function prefixMatch(p) {
+    var i = -1, n = p.length, s = document.body.style;
+    while (++i < n) if (p[i] + "Transform" in s) return "-" + p[i].toLowerCase() + "-";
+    return "";
+}
+
+function getDate(i) {
+    return new Date(1000 * (DATA.start + i * DATA.delta));
+}
+
+function getIndex(date) {
+    return Math.max(0, Math.min(Math.floor((date/1000 - DATA.start) / DATA.delta), DATA.data.length - 1));
+}
+
+function radius(docks) {
+    return Math.sqrt(docks) / (1 << 21);
+}
+
+
+STATIONS = $.map(DATA.stations, function(id) {
+    return STATIONS[id];
+});
+
+
 var width = Math.max(960, window.innerWidth),
-height = Math.max(500, window.innerHeight),
-prefix = prefixMatch(["webkit", "ms", "Moz", "O"]);
+    height = Math.max(500, window.innerHeight),
+    prefix = prefixMatch(["webkit", "ms", "Moz", "O"]);
 
 var tile = d3.geo.tile()
     .size([width, height]);
@@ -10,17 +43,45 @@ var projection = d3.geo.mercator()
     .scale((1 << 22) / 2 / Math.PI)
     .translate([-width / 2, -height / 2]); // just temporary
 
-var tileProjection = d3.geo.mercator();
-
 var tilePath = d3.geo.path()
-    .projection(tileProjection);
+    .projection(d3.geo.mercator());
 
 var zoom = d3.behavior.zoom()
     .scale(projection.scale() * 2 * Math.PI)
-    .scaleExtent([1 << 21, 1 << 23])
+    .scaleExtent([1 << 21, 1 << 24])
 // Elizabeth St & Hester St:
     .translate(projection([-73.996375, 40.71729]).map(function(x) { return -x; }))
     .on("zoom", zoomed);
+
+var mercator = d3.geo.mercator().scale(1 / 2 / Math.PI).translate([0,0]);
+
+
+var margin = {top: 20, right: 20, bottom: 30, left: 50},
+    chartWidth = width - margin.left - margin.right,
+    chartHeight = 200 - margin.top - margin.bottom;
+
+var x = d3.time.scale()
+    .range([0, chartWidth]);
+
+var y = d3.scale.linear()
+    .range([chartHeight, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var area = d3.svg.area()
+    .interpolate("basis")
+    .x(function(d) { return x(d.x); })
+    .y0(function(d) { return y(d.y0); })
+    .y1(function(d) { return y(d.y0 + d.y); });
+
+var stack = d3.layout.stack().values(function(d) { return d.values; });
+
 
 var map = d3.select("body").append("div")
     .attr("class", "map")
@@ -35,164 +96,27 @@ var overlay = map.append("svg")
     .attr("class", "overlay")
     .append("g");
 
-var info = map.append("div")
-    .attr("class", "info");
+var svg = map.append("svg")
+    .attr("class", "chart")
+    .attr("width", chartWidth + margin.left + margin.right)
+    .attr("height", chartHeight + margin.top + margin.bottom)
+    .on("mousemove", chartHover)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+$('.chart').mouseenter(chartEnter).mouseleave(chartLeave);
+var chart = svg.append("g"); // so that paths don't go on top of everything else
 
+var svgX = svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + chartHeight + ")");
 
-function radius(docks) {
-    return Math.sqrt(docks) / (1 << 21);
-}
+var svgY = svg.append("g")
+    .attr("class", "y axis");
 
-function click() {
-    updateDeparture(d3.select(this));
-}
-
-function enterStation(enter) {
-    enter = enter.append("g").attr("class", "station")
-        .attr("transform", function(d) { return "translate(" + mercator([d.longitude, d.latitude]) + ")"; })
-        .on("click", click);
-    enter.append("title")
-        .text(function(d) { return d.id; })
-    enter.append("circle").attr("class", "docks")
-        .attr("r", 0)
-        .transition()
-        .attr("r", function(d) { return radius(d.availableBikes + d.availableDocks); });
-    enter.append("circle").attr("class", "bikes")
-        .attr("r", 0)
-        .transition()
-        .attr("r", function(d) { return radius(d.availableBikes); });
-    enter.append("circle").attr("class", "pulse");
-}
-
-function updateArrival(update) {
-    var transition = update.transition()
-        .delay(function() { return 10000 * Math.random(); })
-        .duration(1000);
-    transition.select(".pulse")
-        .each("start", function() {
-            d3.select(this)
-                .attr("r", radius(500))
-                .attr("opacity", 0);
-        })
-        .attr("r", function(d) { return radius(d.availableBikes); })
-        .attr("opacity", 1);
-
-    transition = transition.transition().duration(250);
-    transition.select(".bikes")
-        .attr("r", function(d) { return radius(1.5 * (d.availableBikes + d.availableDocks)); })
-        .transition()
-        .attr("r", function(d) { return radius(d.availableBikes); });
-    transition.select(".docks")
-        .attr("r", function(d) { return radius(d.availableBikes + d.availableDocks); });
-}
-
-function updateDeparture(update) {
-    var transition = update.transition()
-        .delay(function() { return 10000 * Math.random(); })
-        .duration(1000);
-    transition.select(".pulse")
-        .each("start", function(d) {
-            d3.select(this)
-                .attr("r", radius(d.availableBikes))
-                .attr("opacity", 1);
-        })
-        .attr("r", radius(500))
-        .attr("opacity", 0);
-
-    transition = transition.transition().duration(250);
-    transition.select(".docks")
-        .attr("r", function(d) { return radius(1.5 * (d.availableBikes + d.availableDocks)); })
-        .transition()
-        .attr("r", function(d) { return radius(d.availableBikes + d.availableDocks); });
-    transition.select(".bikes")
-        .attr("r", function(d) { return radius(d.availableBikes); });
-}
-
-var stations;
-var histories;
-var mercator = d3.geo.mercator().scale(1 / 2 / Math.PI).translate([0,0]);
-(function update() {
-    // only load "updates" (which is actually all counts) if we have already loaded stations:
-    $.get("http://appservices.citibikenyc.com/data2/stations.php?updateOnly=" + !!stations, function(data) {
-        data = data.results;
-        var station = overlay.selectAll(".station");
-
-        if (!stations) { // initial load of all data
-            stations = {}; histories = {};
-            $.each(data, function(_, d) {
-                stations[d.id] = d; histories[d.id] = [];
-            });
-            enterStation(station.data(data, function(d) { return d.id; }).enter());
-        }
-
-        else { // we only loaded the counts, so incorporate them into full data and only use the changes
-            var arrivals = [];
-            var departures = [];
-            var arrived = 0, departed = 0, bikes = 0, docks = 0;
-            $.each(data, function(_, d) {
-                var station = stations[d.id];
-                bikes += d.availableBikes; docks += d.availableDocks;
-                if (d.availableBikes != station.availableBikes) {
-                    var history = histories[d.id];
-                    var d0 = history.length >= 2 ? history[history.length - 2] : station;
-
-                    if (d.availableBikes > d0.availableBikes)
-                    { arrivals.push(station); arrived += d.availableBikes - station.availableBikes; }
-                    else if (d.availableBikes < d0.availableBikes)
-                    { departures.push(station); departed += d.availableBikes - station.availableBikes; }
-
-                    station.availableBikes = d.availableBikes;
-                    station.availableDocks = d.availableDocks;
-                    history.push(d);
-                }
-            });
-            console.log({arrivals: arrivals.length, departures: departures.length, arrived: arrived, departed: departed, bikes: bikes, docks: docks});
-
-            updateArrival(station.data(arrivals, function(d) { return d.id; }));
-            updateDeparture(station.data(departures, function(d) { return d.id; }));
-        }
-
-        d3.timer(update, 1000);
-    }, 'jsonp');
-
-    return true; // lest d3.timer repeat ad nauseum
-});//();
-
-STATIONS = $.map(DATA.stations, function(id) {
-    return STATIONS[id];
-});
-
-function setTime(i) {
-    overlay.selectAll(".station").data(DATA.data[i])
-        .call(function(station) {
-            station.enter()
-                .append("g").attr("class", "station")
-                .attr("transform", function(d, i) { return "translate(" + mercator([STATIONS[i].longitude, STATIONS[i].latitude]) + ")"; })
-                .call(function(enter) {
-                    enter.append("title")
-                        .text(function(d, i) { return i; })
-                    enter.append("circle").attr("class", "docks");
-                    enter.append("circle").attr("class", "bikes");
-                    enter.append("circle").attr("class", "pulse");
-                });
-
-            station.select(".bikes")
-                .attr("r", function(d) { return radius(d[0]); });
-            station.select(".docks")
-                .attr("r", function(d) { return radius(d[0] + d[1]); });
-        });
-}
-
-var TIME = 0;
-(function lapse() {
-    console.log(new Date(1000 * (DATA.start + TIME * DATA.delta)));
-    if (TIME < DATA.data.length) {
-        setTime(TIME++);
-        setTimeout(lapse, 100);
-    }
-})();
-
-zoomed();
+var scrubber = svg.append("g")
+    .attr("class", "scrubber");
+scrubber.append("line")
+    .attr("y2", chartHeight);
 
 function zoomed() {
     var tiles = tile
@@ -233,17 +157,107 @@ function zoomed() {
         });
 }
 
-function matrix3d(scale, translate) {
-    var k = scale / 256, r = scale % 1 ? Number : Math.round;
-    return "matrix3d(" + [k, 0, 0, 0, 0, k, 0, 0, 0, 0, k, 0, r(translate[0] * scale), r(translate[1] * scale), 0, 1 ] + ")";
+
+var INDEX = -1;
+function setTime(time) {
+    scrubber//.transition()
+        .attr("transform", "translate(" + x(time) + ",0)");
+
+    var i = getIndex(time);
+    if (INDEX == i) return;
+    INDEX = i;
+
+    overlay.selectAll(".station").data(DATA.data[i])
+        .call(function(station) {
+            station.enter()
+                .append("g").attr("class", "station")
+                .attr("transform", function(d, i) { return "translate(" + mercator([STATIONS[i].longitude, STATIONS[i].latitude]) + ")"; })
+                .on("mouseover", stationOver)
+                .call(function(enter) {
+                    enter.append("title")
+                        .text(function(d, i) { return STATIONS[i].label; })
+                    enter.append("circle").attr("class", "docks");
+                    enter.append("circle").attr("class", "bikes");
+                    enter.append("circle").attr("class", "pulse");
+                });
+            $('.station').mouseleave(stationLeave);
+
+            station.select(".bikes")
+                .attr("r", function(d) { return radius(d[0]); });
+            station.select(".docks")
+                .attr("r", function(d) { return radius(d[0] + d[1]); });
+        });
 }
 
-function svgTransform(scale, translate) {
-    return "translate(" + translate + ") scale(" + scale + ")";
+x.domain([getDate(0), getDate(DATA.data.length)]);
+var STATION = -1;
+function setStation(i) {
+    if (STATION == i) return;
+    STATION = i;
+
+    var getBikes, getDocks;
+    if (i in STATIONS) {
+        getBikes = function(d) { return d[i][0]; };
+        getDocks = function(d) { return d[i][1]; };
+    } else { // system-wide totals
+        getBikes = function(d) { return d3.sum(d, function(x) { return x[0]; }) };
+        getDocks = function(d) { return d3.sum(d, function(x) { return x[1]; }) };
+    }
+
+    var data = stack([
+        {className: "bikes", values: $.map(DATA.data, function(d, i) { return {x: getDate(i), y: getBikes(d)} })},
+        {className: "docks", values: $.map(DATA.data, function(d, i) { return {x: getDate(i), y: getDocks(d)} })}
+    ]);
+    y.domain([0, d3.max(data[1].values, function(d) { return d.y0 + d.y; })]);
+
+    chart.selectAll("path").data(data)
+        .call(function(path) {
+            path.enter()
+                .append("path")
+                .attr("class", function(d) { return d.className; });
+
+            path.transition().attr("d", function(d) { return area(d.values) });
+        });
+
+    svgX.call(xAxis);
+    svgY.call(yAxis);
 }
 
-function prefixMatch(p) {
-    var i = -1, n = p.length, s = document.body.style;
-    while (++i < n) if (p[i] + "Transform" in s) return "-" + p[i].toLowerCase() + "-";
-    return "";
+var CHART_HOVER = false;
+function chartEnter() {
+    CHART_HOVER = true;
 }
+function chartHover() {
+    CHART_HOVER = true;
+    setTime(x.invert(d3.mouse(this)[0] - margin.left));
+}
+function chartLeave() {
+    CHART_HOVER = false;
+}
+
+var setStationTimer;
+function delayedSetStation(i) {
+    // if (setStationTimer) clearTimeout(setStationTimer);
+    // setStationTimer = setTimeout(function() {
+    //     setStationTimer = undefined;
+        setStation(i);
+    // }, 100);
+}
+function stationOver(d, i) {
+    delayedSetStation(i);
+}
+function stationLeave() {
+    delayedSetStation();
+}
+
+function lapse() {
+    if (!CHART_HOVER) {
+        setTime(getDate(INDEX + 1));
+        if (INDEX >= DATA.data.length - 1) INDEX = 0; // wrap around
+    }
+    setTimeout(lapse, 100);
+}
+
+zoomed();
+setStation();
+lapse();
