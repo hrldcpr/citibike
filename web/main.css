@@ -47,11 +47,15 @@ body {
 }
 
 .bikes {
-  fill: #037;
+  /* fill: #037; */
 }
 
 .docks {
-  fill: #3cf;
+  fill: none;
+  /* stroke: #037; */
+  /* stroke-width: 1px; */
+  /* vector-effect: non-scaling-stroke; */
+  /* fill: #3cf; */
 }
 
 .scrubber {

@@ -55,6 +55,8 @@ var zoom = d3.behavior.zoom()
 
 var mercator = d3.geo.mercator().scale(1 / 2 / Math.PI).translate([0,0]);
 
+var colorScale = d3.scale.linear().range(["#3cf", "#037"]);
+
 
 var margin = {top: 50, right: 20, bottom: 30, left: 50},
     chartWidth = width - 20 - margin.left - margin.right,
@@ -168,7 +170,7 @@ function zoomed() {
         });
 }
 
-
+var hourColorScale = d3.scale.linear().domain([0, 12, 24]).range(["#222", "#aa8", "#222"])
 var INDEX = -1;
 function setTime(time) {
     scrubber//.transition()
@@ -178,6 +180,8 @@ function setTime(time) {
     if (INDEX == i) return;
     INDEX = i;
     updateInfo();
+
+    //layer.selectAll(".tile").style("background", hourColorScale(time.getHours()));
 
     overlay.selectAll(".station").data(DATA.data[i])
         .call(function(station) {
@@ -195,7 +199,8 @@ function setTime(time) {
             $('.station').mouseleave(stationLeave);
 
             station.select(".bikes")
-                .attr("r", function(d) { return radius(d[0]); });
+                .attr("r", function(d) { return radius(d[0]); })
+                .attr("fill", function(d) { return colorScale(d[0] / (d[0] + d[1])); });
             station.select(".docks")
                 .attr("r", function(d) { return radius(d[0] + d[1]); });
         });
